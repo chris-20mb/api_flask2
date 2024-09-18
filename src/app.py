@@ -1,4 +1,22 @@
-from flask import Flask
+import os
+import click
+from flask import Flask, current_app
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+  pass
+
+db = SQLAlchemy(model_class=Base)
+
+
+@click.command('init-db')
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    global db
+    with current_app.app_context():
+        db.create_all()
+    click.echo('Initialized the database.')
 
 
 def create_app(test_config=None):
@@ -6,7 +24,7 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY='dev',
-        DATABASE='diobank.sqlite',
+        SQLALCHEMY_DATABASE_URI="sqlite:///dio_bank.sqlite",
     )
 
     if test_config is None:
@@ -17,14 +35,9 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
 
-    # a simple page that says hello
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
-    
-
-    from . import db
-
+    #register cli command
+    app.cli.add_command(init_db_command)
+    #initialize extensions
     db.init_app(app)
 
     return app
